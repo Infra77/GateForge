@@ -1,6 +1,7 @@
 package com.infra.gateforge.management.controller;
 
 import com.infra.gateforge.management.dto.response.HealthResponseDTO;
+import com.infra.gateforge.management.service.HealthService;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,19 +12,17 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/health")
 public class HeathController {
-    private String serviceName;
-    private String serviceDescription;
+
+    private final HealthService healthService;
 
     public HeathController(
-            @Value("${info.service.name}") String serviceName,
-            @Value("${info.service.description}") String serviceDescription
+            HealthService healthService
     ){
-        this.serviceName = serviceName;
-        this.serviceDescription = serviceDescription;
+        this.healthService = healthService;
     }
 
     @GetMapping
     ResponseEntity<HealthResponseDTO> health(){
-        return ResponseEntity.status(HttpStatus.OK).body(new HealthResponseDTO(serviceName, serviceDescription, "Active"));
+        return ResponseEntity.status(HttpStatus.OK).body(this.healthService.getHealth());
     }
 }

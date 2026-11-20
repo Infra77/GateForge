@@ -32,6 +32,9 @@ public class SecurityConfiguration {
                 ))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/health", "/api/auth/login").permitAll()
+                        .requestMatchers("/api/platform/**").hasAuthority("PLATFORM_ADMIN")
+                        .requestMatchers("/api/tenant/**").hasAuthority("TENANT_ADMIN")
+                        .requestMatchers("/api/gateway/**").hasAuthority("GATEWAY_SERVICE")
                         .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2

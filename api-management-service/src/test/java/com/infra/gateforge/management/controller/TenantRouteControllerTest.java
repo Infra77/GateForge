@@ -29,6 +29,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class TenantRouteControllerTest {
     private static final String ROUTES = "/api/tenant/routes";
     private static final String VERSIONS = "/api/tenant/route-versions/";
+    private static final String AUDIT_RECORDS = "/api/tenant/audit-records";
 
     @Autowired MockMvc mvc;
     @Autowired OrganisationRepository organisations;
@@ -77,10 +78,23 @@ class TenantRouteControllerTest {
         assertEquals("GET", objectMapper.readTree(firstSnapshot).get("allowedMethods").get(0).asString());
         reload();
 
-        mvc.perform(delete(url).with(tenant)).andExpect(status().isNoContent());
+        mvc.perform(delete(url).with(tenant).header("X-Correlation-ID", "delete-orders"))
+                .andExpect(status().isNoContent());
         reload();
         mvc.perform(get(url).with(tenant)).andExpect(status().isNotFound());
         mvc.perform(get(ROUTES).with(tenant)).andExpect(jsonPath("$.length()").value(0));
+        mvc.perform(get(AUDIT_RECORDS).with(tenant))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(4))
+                .andExpect(jsonPath("$[0].action").value("DELETE_ROUTE"))
+                .andExpect(jsonPath("$[0].actor").value("user"))
+                .andExpect(jsonPath("$[0].resourceType").value("API_ROUTE"))
+                .andExpect(jsonPath("$[0].resourceId").value(Long.toString(id)))
+                .andExpect(jsonPath("$[0].correlationId").value("delete-orders"))
+                .andExpect(jsonPath("$[0].result").value("SUCCESS"))
+                .andExpect(jsonPath("$[1].action").value("DEACTIVATE_ROUTE"))
+                .andExpect(jsonPath("$[2].action").value("UPDATE_ROUTE"))
+                .andExpect(jsonPath("$[3].action").value("CREATE_ROUTE"));
     }
 
     @Test
@@ -105,6 +119,9 @@ class TenantRouteControllerTest {
         mvc.perform(post(ROUTES).with(tenant).contentType(MediaType.APPLICATION_JSON)
                         .content(routeRequest(owner.getSlug(), "get", "cross-tenant")))
                 .andExpect(status().isBadRequest());
+        mvc.perform(get(AUDIT_RECORDS).with(tenant).param("organisationId", owner.getOrganisationId().toString()))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
     }
 
     private long createRoute(RequestPostProcessor tenant, String body) throws Exception {

@@ -25,9 +25,11 @@ public class TenantAdminService {
     private final OrganisationRepository organisationRepository;
     private final RoleRepository roleRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     @Transactional
     public TenantAdminResponseDTO create(Long organisationId, TenantAdminRequestDTO tenantAdminRequestDTO) {
+        long startedAt = System.nanoTime();
         if (!organisationRepository.existsByOrganisationIdAndStatusNot(organisationId, OrganisationStatus.DELETED)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation not found");
         }
@@ -50,6 +52,8 @@ public class TenantAdminService {
         managementUser.setPasswordHash(passwordEncoder.encode(tenantAdminRequestDTO.getPassword()));
         managementUser.setEnabled(tenantAdminRequestDTO.isEnabled());
         managementUserRepository.save(managementUser);
+        auditService.record(organisation, "CREATE_TENANT_ADMIN", "MANAGEMENT_USER",
+                managementUser.getManagementUserId(), startedAt, "Tenant admin created");
 
         return TenantAdminResponseDTO.from(managementUser);
     }
@@ -70,6 +74,7 @@ public class TenantAdminService {
 
     @Transactional
     public TenantAdminResponseDTO update(Long organisationId, TenantAdminRequestDTO tenantAdminRequestDTO) {
+        long startedAt = System.nanoTime();
         if (!organisationRepository.existsByOrganisationIdAndStatusNot(organisationId, OrganisationStatus.DELETED)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation not found");
         }
@@ -89,11 +94,14 @@ public class TenantAdminService {
         managementUser.setPasswordHash(passwordEncoder.encode(tenantAdminRequestDTO.getPassword()));
         managementUser.setEnabled(tenantAdminRequestDTO.isEnabled());
 
+        auditService.record(organisation, "UPDATE_TENANT_ADMIN", "MANAGEMENT_USER",
+                managementUser.getManagementUserId(), startedAt, "Tenant admin updated");
         return TenantAdminResponseDTO.from(managementUser);
     }
 
     @Transactional
     public void delete(Long organisationId) {
+        long startedAt = System.nanoTime();
         if (!organisationRepository.existsByOrganisationIdAndStatusNot(organisationId, OrganisationStatus.DELETED)) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Organisation not found");
         }
@@ -104,5 +112,7 @@ public class TenantAdminService {
         }
 
         managementUserRepository.delete(managementUser);
+        auditService.record(organisation, "DELETE_TENANT_ADMIN", "MANAGEMENT_USER",
+                managementUser.getManagementUserId(), startedAt, "Tenant admin deleted");
     }
 }

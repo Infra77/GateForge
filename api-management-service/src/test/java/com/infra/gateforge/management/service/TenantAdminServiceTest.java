@@ -21,7 +21,9 @@ class TenantAdminServiceTest {
         var organisationRepository = mock(OrganisationRepository.class);
         var roleRepository = mock(RoleRepository.class);
         var passwordEncoder = new BCryptPasswordEncoder(4);
-        var tenantAdminService = new TenantAdminService(managementUserRepository, organisationRepository, roleRepository, passwordEncoder);
+        var auditService = mock(AuditService.class);
+        var tenantAdminService = new TenantAdminService(managementUserRepository, organisationRepository,
+                roleRepository, passwordEncoder, auditService);
 
         Organisation organisation = new Organisation();
         organisation.setOrganisationId(42L);
@@ -52,5 +54,9 @@ class TenantAdminServiceTest {
         assertTrue(tenantAdminService.update(42L, tenantAdminRequestDTO).isEnabled());
         verify(managementUserRepository, times(1)).findByUsername("tenant-admin");
         assertTrue(passwordEncoder.matches("second-password", managementUser.getPasswordHash()));
+        verify(auditService).record(eq(organisation), eq("CREATE_TENANT_ADMIN"), eq("MANAGEMENT_USER"),
+                eq(1L), anyLong(), anyString());
+        verify(auditService).record(eq(organisation), eq("UPDATE_TENANT_ADMIN"), eq("MANAGEMENT_USER"),
+                eq(1L), anyLong(), anyString());
     }
 }

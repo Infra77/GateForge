@@ -3,8 +3,10 @@ package com.infra.gateforge.management.controller;
 import com.infra.gateforge.management.dto.request.ApiRouteRequestDTO;
 import com.infra.gateforge.management.dto.request.RouteStatusRequestDTO;
 import com.infra.gateforge.management.dto.response.ApiRouteResponseDTO;
+import com.infra.gateforge.management.dto.response.AuditRecordResponseDTO;
 import com.infra.gateforge.management.dto.response.RouteVersionResponseDTO;
 import com.infra.gateforge.management.service.RouteService;
+import com.infra.gateforge.management.service.AuditService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -16,9 +18,11 @@ import java.util.List;
 @RequestMapping("/api/tenant")
 public class TenantRouteController {
     private final RouteService routeService;
+    private final AuditService auditService;
 
-    public TenantRouteController(RouteService routeService) {
+    public TenantRouteController(RouteService routeService, AuditService auditService) {
         this.routeService = routeService;
+        this.auditService = auditService;
     }
 
     @PostMapping("/routes")
@@ -63,5 +67,10 @@ public class TenantRouteController {
     @GetMapping("/route-versions/{apiRouteId}")
     public ResponseEntity<List<RouteVersionResponseDTO>> findRouteVersions(@PathVariable Long apiRouteId) {
         return ResponseEntity.status(HttpStatus.OK).body(routeService.findVersions(apiRouteId));
+    }
+
+    @GetMapping("/audit-records")
+    public ResponseEntity<List<AuditRecordResponseDTO>> findAuditRecords() {
+        return ResponseEntity.status(HttpStatus.OK).body(auditService.findForTenant());
     }
 }

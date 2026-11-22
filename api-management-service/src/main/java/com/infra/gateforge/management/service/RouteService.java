@@ -30,25 +30,32 @@ public class RouteService {
     private final RouteConfigVersionRepository routeConfigVersionRepository;
     private final TenantContext tenantContext;
     private final ObjectMapper objectMapper;
+    private final AuditService auditService;
 
     public RouteService(
             ApiRouteRepository apiRouteRepository,
             RouteConfigVersionRepository routeConfigVersionRepository,
             TenantContext tenantContext,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            AuditService auditService
     ) {
         this.apiRouteRepository = apiRouteRepository;
         this.routeConfigVersionRepository = routeConfigVersionRepository;
         this.tenantContext = tenantContext;
         this.objectMapper = objectMapper;
+        this.auditService = auditService;
     }
 
     @Transactional
     public ApiRouteResponseDTO create(ApiRouteRequestDTO apiRouteRequestDTO) {
+        long startedAt = System.nanoTime();
         ApiRoute apiRoute = new ApiRoute();
         apiRoute.setOrganisation(tenantContext.getOrganisation());
         applyRequest(apiRoute, apiRouteRequestDTO);
-        return saveRouteAndVersion(apiRoute);
+        ApiRouteResponseDTO apiRouteResponseDTO = saveRouteAndVersion(apiRoute);
+        auditService.record(apiRoute.getOrganisation(), "CREATE_ROUTE", "API_ROUTE",
+                apiRoute.getApiRouteId(), startedAt, "Route configuration version 1 created");
+        return apiRouteResponseDTO;
     }
 
     @Transactional(readOnly = true)
@@ -68,21 +75,34 @@ public class RouteService {
 
     @Transactional
     public ApiRouteResponseDTO update(Long apiRouteId, ApiRouteRequestDTO apiRouteRequestDTO) {
+        long startedAt = System.nanoTime();
         ApiRoute apiRoute = getOwnedRoute(apiRouteId);
         applyRequest(apiRoute, apiRouteRequestDTO);
-        return saveRouteAndVersion(apiRoute);
+        ApiRouteResponseDTO apiRouteResponseDTO = saveRouteAndVersion(apiRoute);
+        auditService.record(apiRoute.getOrganisation(), "UPDATE_ROUTE", "API_ROUTE",
+                apiRouteId, startedAt, "Route configuration version " + apiRouteResponseDTO.getVersionId() + " created");
+        return apiRouteResponseDTO;
     }
 
     @Transactional
     public ApiRouteResponseDTO updateStatus(Long apiRouteId, RouteStatusRequestDTO routeStatusRequestDTO) {
+        long startedAt = System.nanoTime();
         ApiRoute apiRoute = getOwnedRoute(apiRouteId);
         apiRoute.setActive(routeStatusRequestDTO.getActive());
-        return saveRouteAndVersion(apiRoute);
+        ApiRouteResponseDTO apiRouteResponseDTO = saveRouteAndVersion(apiRoute);
+        String action = apiRoute.isActive() ? "ACTIVATE_ROUTE" : "DEACTIVATE_ROUTE";
+        auditService.record(apiRoute.getOrganisation(), action, "API_ROUTE",
+                apiRouteId, startedAt, "Route configuration version " + apiRouteResponseDTO.getVersionId() + " created");
+        return apiRouteResponseDTO;
     }
 
     @Transactional
     public void delete(Long apiRouteId) {
-        apiRouteRepository.delete(getOwnedRoute(apiRouteId));
+        long startedAt = System.nanoTime();
+        ApiRoute apiRoute = getOwnedRoute(apiRouteId);
+        apiRouteRepository.delete(apiRoute);
+        auditService.record(apiRoute.getOrganisation(), "DELETE_ROUTE", "API_ROUTE",
+                apiRouteId, startedAt, "Route deleted");
     }
 
     @Transactional(readOnly = true)

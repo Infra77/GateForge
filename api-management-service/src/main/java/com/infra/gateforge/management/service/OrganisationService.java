@@ -8,8 +8,6 @@ import com.infra.gateforge.management.entity.OrganisationStatus;
 import com.infra.gateforge.management.exception.InvalidOrganisationStatusException;
 import com.infra.gateforge.management.exception.OrganisationNotFoundException;
 import com.infra.gateforge.management.repository.OrganisationRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -20,11 +18,14 @@ import java.util.List;
 @Service
 public class OrganisationService {
     private final OrganisationRepository organisationRepository;
+    private final TenantContext tenantContext;
 
     public OrganisationService(
-            OrganisationRepository organisationRepository
+            OrganisationRepository organisationRepository,
+            TenantContext tenantContext
     ){
         this.organisationRepository=organisationRepository;
+        this.tenantContext=tenantContext;
     }
 
     @Transactional
@@ -74,20 +75,17 @@ public class OrganisationService {
         return updateDetails(organisation, organisationRequestDTO);
     }
 
+
+    // Tenant Admin Functionality
+
     @Transactional(readOnly = true)
-    public OrganisationResponseDTO findOwnOrganisation(long organisationId) {
-        return OrganisationResponseDTO.from(activeOrganisation(organisationId));
+    public OrganisationResponseDTO findOwnOrganisation() {
+        return OrganisationResponseDTO.from(tenantContext.getOrganisation());
     }
 
     @Transactional
-    public OrganisationResponseDTO updateOwnOrganisation(long organisationId, OrganisationRequestDTO request) {
-        return updateDetails(activeOrganisation(organisationId), request);
-    }
-
-    private Organisation activeOrganisation(long organisationId) {
-        return organisationRepository.findById(organisationId)
-                .filter(organisation -> organisation.getStatus() == OrganisationStatus.ACTIVE)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active organisation required"));
+    public OrganisationResponseDTO updateOwnOrganisation(OrganisationRequestDTO request) {
+        return updateDetails(tenantContext.getOrganisation(), request);
     }
 
     private OrganisationResponseDTO updateDetails(Organisation organisation, OrganisationRequestDTO request) {

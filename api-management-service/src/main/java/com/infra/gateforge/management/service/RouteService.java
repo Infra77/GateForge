@@ -7,6 +7,7 @@ import com.infra.gateforge.management.dto.response.ApiRouteResponseDTO;
 import com.infra.gateforge.management.dto.response.RouteVersionResponseDTO;
 import com.infra.gateforge.management.entity.ApiRoute;
 import com.infra.gateforge.management.entity.Organisation;
+import com.infra.gateforge.management.entity.OrganisationStatus;
 import com.infra.gateforge.management.entity.RouteConfigVersion;
 import com.infra.gateforge.management.entity.RouteHeaderRule;
 import com.infra.gateforge.management.exception.InvalidRouteException;
@@ -61,8 +62,25 @@ public class RouteService {
     @Transactional(readOnly = true)
     public List<ApiRouteResponseDTO> findAll() {
         Organisation organisation = tenantContext.getOrganisation();
+        return toRouteResponses(apiRouteRepository.findAllByOrganisation(organisation));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApiRouteResponseDTO> findAllActiveForGateway() {
+        return toRouteResponses(apiRouteRepository.findAllByActiveTrueAndOrganisationStatus(OrganisationStatus.ACTIVE));
+    }
+
+    @Transactional(readOnly = true)
+    public List<ApiRouteResponseDTO> findActiveForOrganisation(Long organisationId) {
+        List<ApiRoute> apiRoutes = apiRouteRepository.findAllByOrganisation_OrganisationIdAndActiveTrueAndOrganisationStatus(
+                organisationId, OrganisationStatus.ACTIVE
+        );
+        return toRouteResponses(apiRoutes);
+    }
+
+    private List<ApiRouteResponseDTO> toRouteResponses(List<ApiRoute> apiRoutes) {
         List<ApiRouteResponseDTO> apiRouteResponseDTOs = new ArrayList<>();
-        for (ApiRoute apiRoute : apiRouteRepository.findAllByOrganisation(organisation)) {
+        for (ApiRoute apiRoute : apiRoutes) {
             apiRouteResponseDTOs.add(ApiRouteResponseDTO.from(apiRoute));
         }
         return apiRouteResponseDTOs;

@@ -124,6 +124,40 @@ class TenantRouteControllerTest {
                 .andExpect(jsonPath("$.length()").value(0));
     }
 
+    @Test
+    void gatewayReceivesOnlyActiveRoutesFromActiveOrganisations() throws Exception {
+        Organisation active = createTenant();
+        Organisation suspended = createTenant();
+        String body = routeRequest(active.getSlug(), "get", "active");
+        long included = createRoute(token(active), body);
+        Organisation other = createTenant();
+        createRoute(token(other), routeRequest(other.getSlug(), "get", "other"));
+        long disabled = createRoute(token(active), body);
+        long excluded = createRoute(token(suspended), routeRequest(suspended.getSlug(), "get", "suspended"));
+        mvc.perform(patch(ROUTES + "/" + disabled + "/status").with(token(active))
+                        .contentType(MediaType.APPLICATION_JSON).content("{\"active\":false}"))
+                .andExpect(status().isOk());
+        suspended.setStatus(OrganisationStatus.SUSPENDED);
+        reload();
+
+        String url = "/api/gateway/routes";
+        mvc.perform(get(url)).andExpect(status().isUnauthorized());
+        mvc.perform(get(url).with(token(active))).andExpect(status().isForbidden());
+        mvc.perform(get(url).with(jwt().authorities(new SimpleGrantedAuthority("GATEWAY_SERVICE"))))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.apiRouteId == " + included + ")]").isNotEmpty())
+                .andExpect(jsonPath("$[?(@.apiRouteId == " + disabled + ")]").isEmpty())
+                .andExpect(jsonPath("$[?(@.apiRouteId == " + excluded + ")]").isEmpty());
+        var gateway = jwt().authorities(new SimpleGrantedAuthority("GATEWAY_SERVICE"));
+        mvc.perform(get(url).param("organisationId", active.getOrganisationId().toString()).with(gateway))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1))
+                .andExpect(jsonPath("$[0].apiRouteId").value(included));
+        mvc.perform(get(url).param("organisationId", suspended.getOrganisationId().toString()).with(gateway))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(0));
+    }
+
     private long createRoute(RequestPostProcessor tenant, String body) throws Exception {
         String response = mvc.perform(post(ROUTES).with(tenant)
                         .contentType(MediaType.APPLICATION_JSON).content(body))

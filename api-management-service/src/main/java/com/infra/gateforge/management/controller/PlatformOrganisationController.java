@@ -2,11 +2,8 @@ package com.infra.gateforge.management.controller;
 
 import com.infra.gateforge.management.dto.request.OrganisationRequestDTO;
 import com.infra.gateforge.management.dto.request.OrganisationStatusRequestDTO;
-import com.infra.gateforge.management.dto.request.TenantAdminRequestDTO;
 import com.infra.gateforge.management.dto.response.OrganisationResponseDTO;
-import com.infra.gateforge.management.dto.response.TenantAdminResponseDTO;
 import com.infra.gateforge.management.service.OrganisationService;
-import com.infra.gateforge.management.service.TenantAdminService;
 import jakarta.validation.Valid;
 import org.hibernate.exception.ConstraintViolationException;
 import org.springframework.http.HttpStatus;
@@ -16,14 +13,12 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/platform")
+@RequestMapping("/api/platform/organisations")
 public class PlatformOrganisationController {
     private final OrganisationService organisationService;
-    private final TenantAdminService tenantAdminService;
 
-    public PlatformOrganisationController(OrganisationService organisationService, TenantAdminService tenantAdminService){
+    public PlatformOrganisationController(OrganisationService organisationService){
         this.organisationService=organisationService;
-        this.tenantAdminService = tenantAdminService;
     }
 
     // CRUD on Organisations
@@ -45,7 +40,7 @@ public class PlatformOrganisationController {
     }
 
     // Create Organisation
-    @PostMapping("/organisations")
+    @PostMapping
     public ResponseEntity<OrganisationResponseDTO> createOrganisation(
             @Valid @RequestBody OrganisationRequestDTO organisationRequestDTO
     ){
@@ -53,13 +48,13 @@ public class PlatformOrganisationController {
     }
 
     // Read All
-    @GetMapping("/organisations")
+    @GetMapping
     public ResponseEntity<List<OrganisationResponseDTO>> findAllOrganisations(){
         return ResponseEntity.status(HttpStatus.OK).body(organisationService.findAll());
     }
 
     // Read One
-    @GetMapping("/organisations/{id}")
+    @GetMapping("/{id}")
     public ResponseEntity<OrganisationResponseDTO> findOrganisation(
             @PathVariable Long id
     ){
@@ -67,7 +62,7 @@ public class PlatformOrganisationController {
     }
 
     // Update
-    @PutMapping("/organisations/{id}")
+    @PutMapping("/{id}")
     public ResponseEntity<OrganisationResponseDTO> updateOrganisation(
             @PathVariable Long id,
             @Valid @RequestBody OrganisationRequestDTO organisationRequestDTO
@@ -76,7 +71,7 @@ public class PlatformOrganisationController {
     }
 
     // Patch
-    @PatchMapping("/organisations/{id}")
+    @PatchMapping("/{id}")
     public ResponseEntity<OrganisationResponseDTO> updateOrganisationStatus(
             @PathVariable Long id,
             @Valid @RequestBody OrganisationStatusRequestDTO organisationStatusRequestDTO
@@ -85,41 +80,11 @@ public class PlatformOrganisationController {
     }
 
     // Delete
-    @DeleteMapping("/organisations/{id}")
+    @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteOrganisation(
             @PathVariable Long id
     ){
         organisationService.delete(id);
-        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
-    }
-
-
-    // Each organisation has one tenant admin, identified here by its organisation ID.
-    @PostMapping("/{organisationId}/tenant-admin")
-    public ResponseEntity<TenantAdminResponseDTO> createTenantAdmin(
-            @PathVariable Long organisationId,
-            @Valid @RequestBody TenantAdminRequestDTO tenantAdminRequestDTO
-    ) {
-        return ResponseEntity.status(HttpStatus.CREATED)
-                .body(tenantAdminService.create(organisationId, tenantAdminRequestDTO));
-    }
-
-    @GetMapping("/{organisationId}/tenant-admin")
-    public ResponseEntity<TenantAdminResponseDTO> getTenantAdmin(@PathVariable Long organisationId) {
-        return ResponseEntity.status(HttpStatus.OK).body(tenantAdminService.find(organisationId));
-    }
-
-    @PutMapping("/{organisationId}/tenant-admin")
-    public ResponseEntity<TenantAdminResponseDTO> updateTenantAdmin(
-            @PathVariable Long organisationId,
-            @Valid @RequestBody TenantAdminRequestDTO tenantAdminRequestDTO
-    ) {
-        return ResponseEntity.status(HttpStatus.OK).body(tenantAdminService.update(organisationId, tenantAdminRequestDTO));
-    }
-
-    @DeleteMapping("/{organisationId}/tenant-admin")
-    public ResponseEntity<Void> deleteTenantAdmin(@PathVariable Long organisationId) {
-        tenantAdminService.delete(organisationId);
         return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
     }
 }

@@ -37,9 +37,6 @@ public class TenantAdminService {
         }
 
         Role role = roleRepository.findByRoleName(TENANT_ADMIN);
-        if (role == null) {
-            throw new IllegalStateException("TENANT_ADMIN role is missing");
-        }
 
         String username = tenantAdminRequestDTO.getUsername();
         if (managementUserRepository.findByUsername(username).isPresent()) {
@@ -52,7 +49,7 @@ public class TenantAdminService {
         managementUser.setUsername(username);
         managementUser.setPasswordHash(passwordEncoder.encode(tenantAdminRequestDTO.getPassword()));
         managementUser.setEnabled(tenantAdminRequestDTO.isEnabled());
-        managementUser = managementUserRepository.save(managementUser);
+        managementUserRepository.save(managementUser);
 
         return TenantAdminResponseDTO.from(managementUser);
     }

@@ -8,6 +8,8 @@ import com.infra.gateforge.management.entity.OrganisationStatus;
 import com.infra.gateforge.management.exception.InvalidOrganisationStatusException;
 import com.infra.gateforge.management.exception.OrganisationNotFoundException;
 import com.infra.gateforge.management.repository.OrganisationRepository;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.stereotype.Service;
 
@@ -69,8 +71,28 @@ public class OrganisationService {
             throw new OrganisationNotFoundException("Organisation not found");
         }
 
-        organisation.setName(organisationRequestDTO.getName());
-        organisation.setSlug(organisationRequestDTO.getSlug());
+        return updateDetails(organisation, organisationRequestDTO);
+    }
+
+    @Transactional(readOnly = true)
+    public OrganisationResponseDTO findOwnOrganisation(long organisationId) {
+        return OrganisationResponseDTO.from(activeOrganisation(organisationId));
+    }
+
+    @Transactional
+    public OrganisationResponseDTO updateOwnOrganisation(long organisationId, OrganisationRequestDTO request) {
+        return updateDetails(activeOrganisation(organisationId), request);
+    }
+
+    private Organisation activeOrganisation(long organisationId) {
+        return organisationRepository.findById(organisationId)
+                .filter(organisation -> organisation.getStatus() == OrganisationStatus.ACTIVE)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN, "Active organisation required"));
+    }
+
+    private OrganisationResponseDTO updateDetails(Organisation organisation, OrganisationRequestDTO request) {
+        organisation.setName(request.getName());
+        organisation.setSlug(request.getSlug());
         organisation.setUpdatedAt(LocalDateTime.now());
         return OrganisationResponseDTO.from(organisation);
     }
